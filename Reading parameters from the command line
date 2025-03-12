@@ -1,0 +1,109 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.*;
+
+public class PasswordGenerator {
+
+    private static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+    private static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String DIGITS = "0123456789";
+    private static final String SPECIAL_CHARACTERS = "!@#$%^&*()-_+=<>?/{}[]|:;,.";
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        // Чтение параметров из файла
+        Properties properties = new Properties();
+        try {
+            File configFile = new File("config.txt");
+            if (configFile.exists()) {
+                properties.load(new java.io.FileReader(configFile));
+                System.out.println("Configuration loaded from file.");
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("Config file not found. Proceeding with command-line parameters or default values.");
+        } catch (Exception e) {
+            System.out.println("Error reading config file: " + e.getMessage());
+        }
+
+        // Чтение параметров из командной строки (если они переданы)
+        int length = parseLengthFromArgs(args, properties);
+        boolean includeLower = parseBooleanFromArgs(args, properties, "includeLower");
+        boolean includeUpper = parseBooleanFromArgs(args, properties, "includeUpper");
+        boolean includeDigits = parseBooleanFromArgs(args, properties, "includeDigits");
+        boolean includeSpecial = parseBooleanFromArgs(args, properties, "includeSpecial");
+
+        // Если ни одна категория не выбрана, выводим ошибку
+        if (!(includeLower || includeUpper || includeDigits || includeSpecial)) {
+            System.out.println("Error: You must include at least one category of characters.");
+            return;
+        }
+
+        // Генерация пароля
+        String password = generatePassword(length, includeLower, includeUpper, includeDigits, includeSpecial);
+        System.out.println("Generated password: " + password);
+    }
+
+    // Чтение длины пароля из аргументов или из файла
+    private static int parseLengthFromArgs(String[] args, Properties properties) {
+        int length = 8; // default length
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-l") && i + 1 < args.length) {
+                length = Integer.parseInt(args[i + 1]);
+            } else if (properties.containsKey("length")) {
+                length = Integer.parseInt(properties.getProperty("length"));
+            }
+        }
+        return length;
+    }
+
+    // Чтение флагов из командной строки или файла
+    private static boolean parseBooleanFromArgs(String[] args, Properties properties, String key) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("-" + key) && i + 1 < args.length) {
+                return Boolean.parseBoolean(args[i + 1]);
+            } else if (properties.containsKey(key)) {
+                return Boolean.parseBoolean(properties.getProperty(key));
+            }
+        }
+        return false;
+    }
+
+    public static String generatePassword(int length, boolean includeLower, boolean includeUpper, boolean includeDigits, boolean includeSpecial) {
+        StringBuilder characterSet = new StringBuilder();
+        List<Character> password = new ArrayList<>();
+
+        // Добавляем соответствующие символы в characterSet
+        if (includeLower) {
+            characterSet.append(LOWERCASE);
+        }
+        if (includeUpper) {
+            characterSet.append(UPPERCASE);
+        }
+        if (includeDigits) {
+            characterSet.append(DIGITS);
+        }
+        if (includeSpecial) {
+            characterSet.append(SPECIAL_CHARACTERS);
+        }
+
+        SecureRandom random = new SecureRandom();
+
+        // Генерация пароля
+        for (int i = 0; i < length; i++) {
+            char randomChar = characterSet.charAt(random.nextInt(characterSet.length()));
+            password.add(randomChar);
+        }
+
+        // Перемешиваем символы, чтобы пароль был случайным
+        Collections.shuffle(password, random);
+
+        // Собираем пароль в строку
+        StringBuilder result = new StringBuilder();
+        for (char c : password) {
+            result.append(c);
+        }
+
+        return result.toString();
+    }
+}
